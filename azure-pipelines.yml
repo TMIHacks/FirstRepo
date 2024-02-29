@@ -1,0 +1,52 @@
+trigger:
+  branches:
+    include:
+    - main
+    - dev
+    - stage
+    - feature/*
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  solution: '**/*.sln'
+  project: '**/ConeConnect.Calendar.API.csproj'
+  NUGET_PACKAGES: $(Pipeline.Workspace)/.nuget
+
+stages:
+- stage: Build  
+  jobs: 
+  - job: Build 
+    displayName: 'Build'
+    steps:
+
+      - task: DotNetCoreCLI@2
+        displayName: 'Restore Packages'
+        inputs:
+          command: restore
+          projects: '$(solution)'
+          verbosityRestore: Normal
+
+      - task: DotNetCoreCLI@2
+        displayName: 'Build project'
+        inputs:
+          command: build
+          projects: '$(solution)'
+        continueOnError: false
+
+      - task: CopyFiles@2
+        inputs:
+          Contents: |
+                    **/*
+                    !**\bin\**
+                    !**\debug\**
+                    !**\tests\**
+          TargetFolder: $(Build.ArtifactStagingDirectory)
+          CleanTargetFolder: true
+
+      - task: PublishBuildArtifacts@1
+        inputs:
+          PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+          ArtifactName: 'drop'
+          publishLocation: 'Container'
